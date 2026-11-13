@@ -12,6 +12,8 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Macro tracker</title>
+<link rel="preconnect" href="https://search.openfoodfacts.org" crossorigin>
+<link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
 <style>
 :root{--bg:#f2f4ee;--surface:#fff;--ink:#1b2a25;--mute:#62706a;--line:#d9dfd6;--cal:#0f8b6d;--p:#2f6fed;--c:#d99a00;--f:#d6456b;--over:#c0392b;
@@ -1245,8 +1247,42 @@ document.addEventListener('keydown',function(e){
 });
 
 var DB=[['egg',143,12.6,0.7,9.5,50],['chicken breast',165,31,0,3.6],['rice',130,2.7,28,0.3],['sourdough',260,9,50,1.5,45],['bread',265,9,49,3.2,35],['peanut butter',588,25,20,50],['butter',717,0.9,0.1,81,10],['banana',89,1.1,23,0.3,118],['apple',52,0.3,14,0.2,182],['oats',389,17,66,7],['milk',61,3.2,4.8,3.3],['greek yogurt',59,10,3.6,0.4],['olive oil',884,0,0,100],['salmon',208,20,0,13],['beef mince',215,18,0,15],['broccoli',34,2.8,7,0.4],['potato',77,2,17,0.1,170],['pasta',158,5.8,31,0.9],['avocado',160,2,9,15,150],['almonds',579,21,22,50],['cheddar',403,25,1.3,33],['tofu',76,8,1.9,4.8],['lentils',116,9,20,0.4],['whey protein',400,80,8,6,30]];
+DB=DB.concat([["egg white",52,10.9,0.7,0.2,33,"egg whites"],["egg yolk",322,16,3.6,27,17,"yolk"],["skim milk",34,3.4,5,0.1,0,"skimmed milk fat free"],["full cream milk",61,3.2,4.8,3.3,0,"whole milk"],["2% milk",50,3.3,4.8,2,0,"reduced fat milk"],["almond milk",15,0.6,0.3,1.2,0,"unsweetened almond"],["oat milk",46,1,6.7,1.5,0,""],["soy milk",54,3.3,6.3,1.8,0,"soya"],["full fat greek yogurt",97,9,4,5,0,"yoghurt"],["plain yogurt",61,3.5,4.7,3.3,0,"yoghurt natural"],["cottage cheese",98,11,3.4,4.3,0,""],["cream cheese",342,6,4,34,0,"philadelphia"],["ricotta",174,11,3,13,0,""],["mozzarella",280,28,3,17,0,"cheese"],["parmesan",431,38,4,29,0,"parmigiano cheese"],["feta",264,14,4,21,0,"cheese"],["swiss cheese",380,27,5,28,0,"emmental"],["heavy cream",340,2.1,2.8,36,0,"thickened cream double"],["sour cream",193,2.4,4.6,19,0,""],["ghee",900,0,0,100,0,"clarified butter"],["chicken breast raw",120,22.5,0,2.6,0,"uncooked"],["chicken thigh",209,26,0,11,0,"cooked skinless"],["chicken thigh raw",121,19.7,0,4.1,0,"uncooked"],["chicken drumstick",172,28.3,0,5.7,0,"cooked"],["chicken wings",290,27,0,19,0,"wing"],["turkey breast",135,30,0,0.7,0,"cooked"],["ground turkey",203,27,0,10,0,"turkey mince"],["lean beef mince",171,26,0,7,0,"ground beef 95% 5% lean"],["sirloin steak",206,30,0,9,0,"beef cooked"],["ribeye steak",291,24,0,21,0,"rib eye scotch fillet beef"],["pork loin",195,27,0,9,0,"pork cooked"],["pork chop",231,26,0,14,0,"pork"],["bacon",541,37,1.4,42,8,"rashers cooked"],["ham",145,21,1.5,5.5,0,"sliced"],["pork sausage",300,18,2,24,0,"snag sausages cooked"],["lamb",294,25,0,21,0,"cooked lamb chop"],["salami",336,22,1.2,26,0,""],["prosciutto",250,28,0,15,0,""],["beef jerky",410,33,11,26,0,""],["tuna canned",116,26,0,1,0,"tuna in water"],["cod",105,23,0,0.9,0,"fish cooked"],["tilapia",128,26,0,2.7,0,"fish cooked"],["prawns",99,24,0.2,0.3,0,"shrimp cooked"],["sardines",208,25,0,11,0,"canned"],["trout",190,26,0,8.5,0,"fish cooked"],["crab",97,19,0,1.5,0,""],["mussels",172,24,7.4,4.5,0,"cooked"],["brown rice",123,2.7,26,1,0,"cooked"],["quinoa",120,4.4,21,1.9,0,"cooked"],["cooked oatmeal",71,2.5,12,1.5,0,"porridge"],["dry pasta",371,13,75,1.5,0,"uncooked spaghetti"],["wholemeal pasta",124,5.3,26.5,0.5,0,"whole wheat cooked"],["couscous",112,3.8,23,0.2,0,"cooked"],["whole wheat bread",247,13,41,3.4,35,"wholemeal toast"],["bagel",257,10,50,1.6,95,""],["flour tortilla",304,8,50,8,45,"wrap"],["pita",275,9,56,1.2,60,"pita bread"],["naan",290,9,50,5.1,90,"bread"],["croissant",406,8.2,45,21,60,""],["english muffin",227,8,44,1.8,57,""],["cornflakes",357,7,84,0.4,0,"cereal"],["granola",471,10,64,20,0,"muesli cereal"],["rice cakes",387,8,81,2.8,9,"rice cake"],["crackers",421,9,71,12,0,"cracker biscuit"],["popcorn",387,13,78,4.5,0,""],["sweet potato",86,1.6,20,0.1,130,"kumara"],["french fries",312,3.4,41,15,0,"chips hot chips"],["mashed potato",83,2,17,1,0,""],["carrot",41,0.9,10,0.2,61,"carrots"],["spinach",23,2.9,3.6,0.4,0,"baby spinach"],["lettuce",15,1.4,2.9,0.2,0,"salad"],["tomato",18,0.9,3.9,0.2,123,"tomatoes"],["cucumber",15,0.7,3.6,0.1,0,""],["capsicum",31,1,6,0.3,120,"bell pepper peppers"],["onion",40,1.1,9.3,0.1,110,"onions"],["garlic",149,6.4,33,0.5,3,"clove"],["mushrooms",22,3.1,3.3,0.3,0,"mushroom"],["zucchini",17,1.2,3.1,0.3,0,"courgette"],["cauliflower",25,1.9,5,0.3,0,""],["cabbage",25,1.3,5.8,0.1,0,""],["kale",49,4.3,8.8,0.9,0,""],["asparagus",20,2.2,3.9,0.1,0,""],["green beans",31,1.8,7,0.2,0,"beans"],["peas",81,5.4,14,0.4,0,"green peas"],["corn",86,3.3,19,1.4,0,"sweetcorn"],["eggplant",25,1,5.9,0.2,0,"aubergine"],["celery",16,0.7,3,0.2,0,""],["beetroot",43,1.6,10,0.2,0,"beet"],["pumpkin",26,1,6.5,0.1,0,"squash butternut"],["brussels sprouts",43,3.4,9,0.3,0,"sprouts"],["chickpeas",164,8.9,27,2.6,0,"garbanzo cooked"],["black beans",132,8.9,24,0.5,0,"cooked"],["kidney beans",127,8.7,23,0.5,0,"cooked"],["baked beans",94,4.8,21,0.5,0,"canned"],["edamame",121,12,9,5,0,"soy beans"],["hummus",166,8,14,9.6,0,"dip"],["tempeh",192,20,7.6,11,0,""],["orange",47,0.9,12,0.1,131,"oranges"],["mandarin",53,0.8,13,0.3,88,"clementine"],["strawberries",32,0.7,7.7,0.3,0,"strawberry"],["blueberries",57,0.7,14,0.3,0,"blueberry"],["raspberries",52,1.2,12,0.7,0,"raspberry"],["blackberries",43,1.4,10,0.5,0,"blackberry"],["grapes",69,0.7,18,0.2,0,"grape"],["watermelon",30,0.6,7.6,0.2,0,""],["pineapple",50,0.5,13,0.1,0,""],["mango",60,0.8,15,0.4,0,""],["pear",57,0.4,15,0.1,178,""],["peach",39,0.9,10,0.3,150,"nectarine"],["kiwi",61,1.1,15,0.5,69,"kiwifruit"],["lemon",29,1.1,9,0.3,0,""],["cherries",63,1,16,0.2,0,"cherry"],["rockmelon",34,0.8,8.2,0.2,0,"cantaloupe melon"],["plum",46,0.7,11,0.3,66,""],["grapefruit",42,0.8,11,0.1,0,""],["dates",282,2.5,75,0.4,24,"medjool"],["raisins",299,3.1,79,0.5,0,"sultanas"],["dried apricots",241,3.4,63,0.5,0,""],["coconut milk",197,1.8,2.8,21,0,"canned"],["walnuts",654,15,14,65,0,""],["cashews",553,18,30,44,0,""],["peanuts",567,26,16,49,0,""],["pistachios",560,20,28,45,0,""],["macadamia",718,8,14,76,0,"nuts"],["pecans",691,9,14,72,0,""],["hazelnuts",628,15,17,61,0,""],["chia seeds",486,17,42,31,0,""],["flaxseed",534,18,29,42,0,"linseed"],["pumpkin seeds",559,30,11,49,0,"pepitas"],["sunflower seeds",584,21,20,51,0,""],["almond butter",614,21,19,56,0,""],["tahini",595,17,21,54,0,"sesame paste"],["desiccated coconut",660,6.9,24,65,0,"shredded"],["coconut oil",862,0,0,100,0,""],["vegetable oil",884,0,0,100,0,"canola sunflower"],["mayonnaise",680,1,0.6,75,0,"mayo"],["dark chocolate",598,7.8,46,43,0,"70%"],["milk chocolate",535,7.7,59,30,0,""],["honey",304,0.3,82,0,0,""],["sugar",387,0,100,0,0,"white sugar"],["maple syrup",260,0,67,0.1,0,""],["jam",250,0.4,64,0.1,0,"jelly"],["nutella",539,6.3,57.5,30.9,0,"chocolate hazelnut spread"],["ice cream",207,3.5,24,11,0,"vanilla"],["potato chips",536,7,53,35,0,"crisps"],["cookie",488,5,64,24,0,"biscuit chocolate chip"],["doughnut",452,5,51,25,0,"donut"],["chocolate cake",371,5,53,16,0,"cake"],["pizza",266,11,33,10,0,"cheese slice"],["beef burger",295,17,24,14,0,"hamburger"],["coffee",1,0.1,0,0,0,"black coffee"],["orange juice",45,0.7,10,0.2,0,"oj"],["cola",42,0,10.6,0,0,"coke soda soft drink"],["beer",43,0.5,3.6,0,0,"lager"],["red wine",85,0.1,2.6,0,0,"wine"],["ketchup",101,1,27,0.1,0,"tomato sauce"],["soy sauce",53,8,5,0.6,0,""],["mustard",66,4,6,4,0,""],["bbq sauce",172,0.8,41,0.6,0,"barbecue"],["pasta sauce",58,1.6,9,1.6,0,"tomato passata"],["seitan",370,75,14,1.9,0,"wheat gluten"],["protein bar",370,30,35,12,60,""],["white rice",130,2.7,28,0.3,0,"cooked rice"]]);var ALIAS={"egg":"eggs","rice":"white rice cooked","sourdough":"bread toast","bread":"toast slice white","oats":"oatmeal porridge rolled","whey protein":"protein powder shake","beef mince":"ground beef minced","greek yogurt":"yoghurt nonfat","potato":"potatoes spud","pasta":"spaghetti noodles cooked","peanut butter":"pb","olive oil":"oil","salmon":"fish","chicken breast":"chicken cooked","cheddar":"cheese","almonds":"almond nuts","banana":"bananas","apple":"apples","avocado":"avo","milk":"full cream whole"};DB.forEach(function(f){if(!f[6]&&ALIAS[f[0]])f[6]=ALIAS[f[0]];});
 var stack=[],hits=[],pend=null;
-function ck(f){var n=f[0].charAt(0).toUpperCase()+f[0].slice(1);return {name:n,k:[f[1]/100,f[2]/100,f[3]/100,f[4]/100],unit:'g',qty:f[5]||100,pc:f[5]||0};}
+function ck(f){var n=f[0].charAt(0).toUpperCase()+f[0].slice(1);return {name:n,al:f[6]||'',k:[f[1]/100,f[2]/100,f[3]/100,f[4]/100],unit:'g',qty:f[5]||100,pc:f[5]||0};}
+function nrm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9% ]+/g,' ');}
+function stem(w){return w.length>3?w.replace(/ies$/,'y').replace(/(es|s)$/,''):w;}
+function localSearch(q){
+  var toks=nrm(q).split(/\s+/).filter(Boolean).map(stem),out=[];
+  if(!toks.length)return out;
+  var tj=toks.join(' ');
+  sources().forEach(function(it){
+    var nm=nrm(it.name),hay=nm+' '+nrm(it.brand)+' '+nrm(it.al);
+    var words=hay.split(/\s+/).filter(Boolean).map(stem),nw=nm.split(/\s+/).filter(Boolean).map(stem),sc=0,i,j;
+    for(i=0;i<toks.length;i++){
+      var t=toks[i],best=-1;
+      for(j=0;j<words.length;j++){if(words[j]===t){best=3;break;}if(words[j].indexOf(t)===0&&best<2)best=2;}
+      if(best<0&&t.length>=3&&hay.indexOf(t)>-1)best=1;
+      if(best<0)return;
+      sc+=best;
+    }
+    var nj=nw.join(' ');
+    if(nj===tj)sc+=10;else if(nj.indexOf(tj)===0)sc+=5;else if(nw[0]===toks[0])sc+=2;
+    sc-=nw.length*0.3;
+    out.push({it:it,sc:sc});
+  });
+  out.sort(function(a,b){return b.sc-a.sc||a.it.name.length-b.it.name.length;});
+  return out.slice(0,40).map(function(x){return x.it;});
+}
+function dbBest(nm){
+  var best=null,bl=0;
+  DB.forEach(function(x){if(nm.indexOf(x[0])>-1&&x[0].length>bl){best=x;bl=x[0].length;}});
+  if(best)return best;
+  bl=1e9;DB.forEach(function(x){if(x[0].indexOf(nm)>-1&&x[0].length<bl){best=x;bl=x[0].length;}});
+  if(best)return best;
+  DB.forEach(function(x){if(!best&&x[6]&&(' '+nrm(x[6])+' ').indexOf(' '+nm+' ')>-1)best=x;});
+  return best;
+}
 function bmsg(t){$('bcMsg').textContent=t;}
 function sources(){return DB.map(ck).concat(state.foods.map(foodItem),state.recipes.map(favItem),state.favs.map(favItem),Object.keys(state.products).map(function(b){return favItem(state.products[b]);}),Object.keys(state.offCache).map(function(c){return offItem(state.offCache[c]);}));}
 function renderStack(){
@@ -1276,7 +1312,7 @@ function localParse(t){
     var m=part.match(/^(\d+(?:\.\d+)?)\s*(kg|g|grams?|oz|ml|tbsp|tsp|cups?|slices?|pieces?)?\s*(?:of\s+)?(.+)$/i),n=1,u='',name=part;
     if(m){n=parseFloat(m[1]);u=(m[2]||'').toLowerCase();name=m[3];}
     var nm=name.toLowerCase().trim().replace(/s$/,'');
-    var f=DB.filter(function(x){return nm.indexOf(x[0])>-1||x[0].indexOf(nm)>-1;})[0];
+    var f=dbBest(nm);
     if(!f){miss.push(part);return;}
     var per=f[5]||100,it=ck(f);
     var gm=/^kg/.test(u)?n*1000:/^(g|gram|ml)/.test(u)?n:u==='oz'?n*28.35:u==='tbsp'?n*15:u==='tsp'?n*5:/^cup/.test(u)?n*240:n*per;
@@ -1660,7 +1696,7 @@ function renderLib(){
   $('libBody').innerHTML=h;
 }
 $('libSort').onclick=function(){libSort=libSort==='az'?'recent':'az';this.classList.toggle('on',libSort==='az');renderLib();};
-$('sq').oninput=function(){if(shTab==='lib'){renderLib();return;}if(shTab!=='search')shGo('search');else renderSearch();};
+$('sq').oninput=function(){if(shTab==='lib'){renderLib();return;}if(shTab!=='search')shGo('search');offAuto();renderSearch();};
 $('sheet').onclick=function(e){
   var b=e.target.closest?e.target.closest('[data-add],[data-del2],[data-fd],[data-lt],[data-sm],[data-am],[data-newfood]'):null;if(!b)return;
   var v;
@@ -1833,21 +1869,27 @@ function offErr(e){
   if(e&&(e.code===429||e.code===503))return 'Open Food Facts is busy or rate-limiting right now. Wait a moment and try again.';
   return 'Couldn\u2019t reach Open Food Facts. Check your internet connection, or whether an ad blocker is stopping requests to openfoodfacts.org.';
 }
-async function offFetch(url){
-  var ctl=new AbortController(),tm=setTimeout(function(){ctl.abort();},9000);
+async function offFetch(url,ms,sig){
+  var ctl=new AbortController(),tm=setTimeout(function(){ctl.abort();},ms||9000);
+  if(sig){if(sig.aborted)ctl.abort();else sig.addEventListener('abort',function(){ctl.abort();});}
   try{
     var res=await fetch(url,{signal:ctl.signal});
     if(!res.ok){var er=new Error('http');er.code=res.status;throw er;}
     return await res.json();
   }finally{clearTimeout(tm);}
 }
-function offN(n,k){var v=n&&n[k];return typeof v==='number'?v:parseFloat(v);}
+function offN(n,k){
+  var v=n&&n[k];if(v&&typeof v==='object')v=v['100g'];
+  if(v===undefined||v===null){var b=n&&n[k.replace(/_100g$/,'')];if(b&&typeof b==='object')v=b['100g'];}
+  return typeof v==='number'?v:parseFloat(v);
+}
+function offStr(v){if(v&&typeof v==='object'&&!Array.isArray(v))v=v.en||v.main||Object.keys(v).map(function(k){return v[k];})[0];return String(v||'').trim();}
 function offMap(p){
   var n=p.nutriments||{};
   if(Array.isArray(n)){var o={};n.forEach(function(x){if(x&&x.name)o[x.name+'_100g']=x['100g'];});n=o;}
   var kc=offN(n,'energy-kcal_100g');
   if(!(kc>=0)){var kj=offN(n,'energy_100g');kc=kj>=0?kj/4.184:NaN;}
-  var name=String(p.product_name||p.product_name_en||p.generic_name||p.generic_name_en||'').trim();
+  var name=offStr(p.product_name)||offStr(p.product_name_en)||offStr(p.generic_name)||offStr(p.generic_name_en);
   if(!name||!(kc>=0))return null;
   var g=function(k){var v=offN(n,k);return v>=0?v:0;};
   return {name:name,brand:String(p.brands||'').split(',')[0].trim(),barcode:String(p.code||''),per:'100g',sg:parseFloat(p.serving_quantity)||0,sl:String(p.serving_size||''),cal:kc,p:g('proteins_100g'),c:g('carbohydrates_100g'),f:g('fat_100g'),fiber:g('fiber_100g'),sugar:g('sugars_100g'),src:'off'};
@@ -1859,43 +1901,71 @@ function cacheOff(f){
   var ks=Object.keys(o);while(ks.length>500){delete o[ks.shift()];}
   save();
 }
-var OFFPS=24,OFFF='code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity';
-async function offSearch(q,page){
-  var j=null,enc=encodeURIComponent(q);
-  try{j=await offFetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+enc+'&search_simple=1&action=process&json=1&sort_by=unique_scans_n&page='+page+'&page_size='+OFFPS+'&fields='+OFFF);}
-  catch(e){
-    if(e.code===429)throw e;
-    try{j=await offFetch('https://search.openfoodfacts.org/search?q='+enc+'&page='+page+'&page_size='+OFFPS+'&fields='+OFFF);}catch(e2){throw e;}
-  }
-  var list=(j&&(j.products||j.hits))||[],out=[];
-  list.forEach(function(p){var f=offMap(p);if(f)out.push(offItem(f));});
-  return {items:out,more:list.length>=OFFPS};
+var OFFPS=24,OFFF='code,product_name,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity',OFFQK='macro-offq-v1',offMem={},offSeq=0,offCtl=null,offTimer=0,offPendQ='';
+function offQLoad(){try{return JSON.parse(localStorage.getItem(OFFQK)||'{}')||{};}catch(e){return {};}}
+function offQGet(k){var m=offMem[k];if(m)return m;var o=offQLoad()[k];if(o&&Date.now()-o.t<6048e5){offMem[k]=o;return o;}return null;}
+function offQPut(k,v){
+  v.t=Date.now();offMem[k]=v;
+  try{var o=offQLoad(),ks=Object.keys(o);o[k]=v;ks=Object.keys(o).sort(function(a,b){return o[a].t-o[b].t;});while(ks.length>25)delete o[ks.shift()];localStorage.setItem(OFFQK,JSON.stringify(o));}catch(e){}
 }
-async function offRun(more){
+async function offSearch(q,page,sig){
+  var key=q.toLowerCase()+'|'+page,hit=offQGet(key);
+  if(hit)return {items:hit.f.map(offItem),more:hit.more,cached:true};
+  var j=null,enc=encodeURIComponent(q),list=[],fs=[],tried=false;
+  function take(l){var o=[];l.forEach(function(p){var f=offMap(p);if(f)o.push(f);});return o;}
+  try{
+    j=await offFetch('https://search.openfoodfacts.org/search?q='+enc+'&page='+page+'&page_size='+OFFPS+'&fields='+OFFF,6000,sig);
+    list=(j&&(j.hits||j.products))||[];fs=take(list);
+  }catch(e){if(e&&e.name==='AbortError'&&sig&&sig.aborted)throw e;list=[];fs=[];}
+  if(!fs.length&&!(sig&&sig.aborted)){
+    try{
+      j=await offFetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+enc+'&search_simple=1&action=process&json=1&sort_by=unique_scans_n&page='+page+'&page_size='+OFFPS+'&fields='+OFFF,9000,sig);
+      list=(j&&j.products)||[];fs=take(list);
+    }catch(e2){if(!list.length)throw e2;}
+  }
+  var more=list.length>=OFFPS;
+  if(fs.length)offQPut(key,{f:fs,more:more});
+  return {items:fs.map(offItem),more:more};
+}
+async function offRun(more,auto){
   var q=$('sq').value.trim();if(q.length<2)return;
-  var now=Date.now();offT=offT.filter(function(t){return now-t<60000;});
   var keep=more===true&&offRes.q===q&&offRes.st==='done'?offRes:null,page=keep?keep.page+1:1;
-  if(offT.length>=8){var rl='Open Food Facts allows about 10 searches a minute. Wait a few seconds and try again.';if(keep){keep.msg=rl;}else offRes={q:q,items:[],st:'error',msg:rl,page:0,more:false};renderSearch();return;}
-  offT.push(now);
+  var cached=!!offQGet(q.toLowerCase()+'|'+page);
+  var now=Date.now();offT=offT.filter(function(t){return now-t<60000;});
+  if(!cached&&offT.length>=8){
+    if(auto){offPendQ='';renderSearch();return;}
+    var rl='Open Food Facts allows about 10 searches a minute. Wait a few seconds and try again.';if(keep){keep.msg=rl;}else offRes={q:q,items:[],st:'error',msg:rl,page:0,more:false};renderSearch();return;
+  }
+  if(!cached)offT.push(now);
+  if(offCtl)offCtl.abort();offCtl=new AbortController();var sig=offCtl.signal,my=++offSeq;
   if(keep){keep.busy=true;keep.msg='';}else offRes={q:q,items:[],st:'loading',msg:'',page:0,more:false};
   renderSearch();
   try{
-    var r=await offSearch(q,page);
-    if($('sq').value.trim()!==q&&!keep){}
+    var r=await offSearch(q,page,sig);
+    if(my!==offSeq)return;
     if(keep){var seen={};keep.items.forEach(function(x){if(x.off.barcode)seen[x.off.barcode]=1;});r.items.forEach(function(x){if(!(x.off.barcode&&seen[x.off.barcode]))keep.items.push(x);});keep.page=page;keep.more=r.more;keep.busy=false;}
     else{var sn={},dd=[];r.items.forEach(function(x){var bc=x.off.barcode;if(!(bc&&sn[bc])){if(bc)sn[bc]=1;dd.push(x);}});offRes={q:q,items:dd,st:'done',msg:'',page:1,more:r.more};}
   }catch(e){
+    if(my!==offSeq||(e&&e.name==='AbortError'&&sig.aborted))return;
     if(keep){keep.busy=false;keep.msg=offErr(e);}else offRes={q:q,items:[],st:'error',msg:offErr(e),page:0,more:false};
   }
   renderSearch();
 }
+function offAuto(){
+  clearTimeout(offTimer);offPendQ='';
+  var q=$('sq').value.trim();
+  if(shTab!=='search'||q.length<3||(offRes.q===q&&offRes.st!=='error'))return;
+  offPendQ=q;
+  offTimer=setTimeout(function(){offPendQ='';if($('sq').value.trim()===q&&shTab==='search')offRun(false,true);},450);
+}
 function searchHtml(q){
-  var res=sources().filter(function(x){return x.name.toLowerCase().indexOf(q)>-1||(x.brand&&x.brand.toLowerCase().indexOf(q)>-1);}).slice(0,25);
+  var res=localSearch(q).slice(0,20);
   var h=res.map(function(x){return rowHtml(x);}).join(''),qq=$('sq').value.trim();
   if(qq.length>=2){
     if(offRes.q===qq&&offRes.st==='loading')h+="<p class='hint' style='margin-top:12px'>Searching Open Food Facts\u2026</p>";
     else if(offRes.q===qq&&offRes.st==='done')h+="<h3>Open Food Facts</h3>"+(offRes.items.length?offRes.items.map(function(x){return rowHtml(x);}).join(''):"<p class='hint'>No products with nutrition data found online for \u201c"+esc(qq)+"\u201d. Try fewer or different words, or a brand name.</p>")+(offRes.msg?"<p class='hint'>"+offRes.msg+"</p>":'')+(offRes.more?"<button type='button' class='pillbtn' data-offmore='1' style='margin:12px 0 4px'"+(offRes.busy?" disabled":"")+">"+(offRes.busy?'Loading\u2026':'Show more results')+"</button>":'')+OFFCR;
     else if(offRes.q===qq&&offRes.st==='error')h+="<p class='hint' style='margin-top:12px'>"+offRes.msg+"</p>";
+    else if(offPendQ===qq)h+=(res.length?'':"<p class='hint'>No saved foods match \u201c"+esc(qq)+"\u201d.</p>")+"<p class='hint' style='margin-top:12px'>Searching Open Food Facts\u2026</p>";
     else h+=(res.length?'':"<p class='hint'>No saved foods match \u201c"+esc(qq)+"\u201d.</p>")+"<button type='button' class='pillbtn' data-offq='1' style='margin:12px 0 4px'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M16 16l5 5'/></svg>Search Open Food Facts</button><p class='hint' style='margin-top:6px'>Searches millions of packaged foods. Press Enter or tap the button.</p>";
   }else if(!res.length)h="<p class='hint'>No match for \u201c"+esc(q)+"\u201d.</p>";
   $('searchBody').innerHTML=h;
