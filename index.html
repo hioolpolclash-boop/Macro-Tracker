@@ -582,7 +582,7 @@ section[data-tab]{animation:vin .26s cubic-bezier(.2,.8,.2,1)}
           <label class='round up' for='aiUp' aria-label='Upload a photo'><svg viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 16V4M7 9l5-5 5 5M5 20h14'/></svg></label><input id='aiUp' type='file' accept='image/*' hidden>
         </div>
       </div>
-      <div id='aiBusy' class='busy' hidden><img id='aiImg' alt='Your meal'><div class='ba'></div><p>Analyzing&hellip;</p></div>
+      <div id='aiBusy' class='busy' hidden><img id='aiImg' alt='Your meal'><div class='ba'></div><p>Analyzing&hellip; usually 3 to 10 seconds</p></div>
       <div id='aiRes'></div>
     </div>
     <div class='pane' data-pane='quick' hidden>
@@ -761,23 +761,32 @@ function aiCfg(){try{var c=JSON.parse(localStorage.getItem(AIKEY)||'null');retur
 function aiProv(c){return c.provider||(c.key?'anthropic':'gemini');}
 function aiKeyOf(c){return aiProv(c)==='gemini'?(c.gkey||''):(c.key||'');}
 var AISYS='You are the nutrition assistant inside a food-logging app. Reply with only the JSON the user asks for, with no prose and no code fences.';
+var gThink=0;
 function geminiSampler(c){
   return {json:async function(prompt,opt){
     var parts=[],imgs=(opt&&opt.images)||[],i,res,j=null;
     for(i=0;i<imgs.length;i++){var b=imgs[i],mt=b&&/^image\/(jpeg|png|gif|webp|heic|heif)$/.test(b.type)?b.type:'image/jpeg';parts.push({inline_data:{mime_type:mt,data:await blobB64(b)}});}
     parts.push({text:prompt});
-    var ctl=new AbortController(),tm=setTimeout(function(){ctl.abort();},60000);
-    try{
-      res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(c.gmodel||'gemini-flash-latest')+':generateContent',{method:'POST',signal:ctl.signal,headers:{'content-type':'application/json','x-goog-api-key':c.gkey},body:JSON.stringify({systemInstruction:{parts:[{text:AISYS}]},contents:[{role:'user',parts:parts}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:4000,temperature:0.2}})});
-    }catch(e){throw new Error(e&&e.name==='AbortError'?'The AI request timed out. Try again.':'Couldn’t reach Google’s AI service. Check your connection or any ad blocker.');}
-    finally{clearTimeout(tm);}
-    try{j=await res.json();}catch(e){}
-    if(!res.ok){
-      var em=(j&&j.error&&j.error.message)||('HTTP '+res.status),st=j&&j.error&&j.error.status;
-      throw new Error(res.status===429?'Gemini’s free limit was hit (it is per minute and per day). Wait a bit and try again.':(res.status===400&&/API key/i.test(em))||res.status===401||res.status===403?'Google rejected the key. Check it in More, AI features.':res.status===404?'That model isn’t available to this key. Pick another model in More, AI features.':em);
+    var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(c.gmodel||'gemini-flash-latest')+':generateContent';
+    var TC=[{thinkingBudget:0},{thinkingLevel:'minimal'},null],attempt=0,t0=Date.now();
+    for(;;){
+      var gc={responseMimeType:'application/json',maxOutputTokens:4000,temperature:0.2};
+      if(TC[gThink])gc.thinkingConfig=TC[gThink];
+      var ctl=new AbortController(),tm=setTimeout(function(){ctl.abort();},40000);
+      try{
+        res=await fetch(url,{method:'POST',signal:ctl.signal,headers:{'content-type':'application/json','x-goog-api-key':c.gkey},body:JSON.stringify({systemInstruction:{parts:[{text:AISYS}]},contents:[{role:'user',parts:parts}],generationConfig:gc})});
+      }catch(e){throw new Error(e&&e.name==='AbortError'?'Google’s AI took too long to answer (over 40 seconds). Try again, or pick Flash-Lite in More, AI features for faster replies.':'Couldn’t reach Google’s AI service. Check your connection or any ad blocker.');}
+      finally{clearTimeout(tm);}
+      j=null;try{j=await res.json();}catch(e){}
+      if(res.ok)break;
+      var em=(j&&j.error&&j.error.message)||('HTTP '+res.status);
+      if(res.status===400&&/think/i.test(em)&&gThink<TC.length-1){gThink++;continue;}
+      if((res.status===503||res.status===500)&&attempt<2&&Date.now()-t0<25000){attempt++;await new Promise(function(r){setTimeout(r,1200*attempt);});continue;}
+      throw new Error(res.status===429?'Gemini’s free limit was hit (it is per minute and per day). Wait a minute and try again, or switch to Flash-Lite, which has higher free limits.':res.status===503?'Google’s AI is overloaded right now. Try again in a moment, or switch model in More, AI features.':(res.status===400&&/API key/i.test(em))||res.status===401||res.status===403?'Google rejected the key. Check it in More, AI features.':res.status===404?'That model isn’t available to this key. Pick another model in More, AI features.':'Google said: '+em);
     }
     var cd=j&&j.candidates&&j.candidates[0];
     if(!cd||!cd.content){throw new Error(j&&j.promptFeedback&&j.promptFeedback.blockReason?'Google blocked that request. Try a different photo.':'Gemini sent no answer. Try again.');}
+    if(cd.finishReason==='MAX_TOKENS'&&!(cd.content.parts||[]).some(function(x){return x.text&&!x.thought;})){throw new Error('Gemini ran out of room before answering. Try again, or choose Flash-Lite.');}
     return parseAiJson((cd.content.parts||[]).filter(function(x){return x.text&&!x.thought;}).map(function(x){return x.text;}).join(''));
   }};
 }
@@ -822,7 +831,7 @@ function getSampler(){
 function shrink(file){
   return new Promise(function(res){
     var img=new Image();
-    img.onload=function(){var k=Math.min(1,1024/Math.max(img.width,img.height));var cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);cv.toBlob(function(b){res(b||file);},'image/jpeg',0.82);};
+    img.onload=function(){var k=Math.min(1,800/Math.max(img.width,img.height));var cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);cv.toBlob(function(b){res(b||file);},'image/jpeg',0.72);};
     img.onerror=function(){res(file);};
     img.src=URL.createObjectURL(file);
   });
