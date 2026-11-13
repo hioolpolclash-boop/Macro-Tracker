@@ -220,7 +220,7 @@ button.pcol{cursor:pointer}
 .ring svg{position:absolute;inset:0;width:164px;height:164px;transform:none;overflow:visible}
 .ring path{fill:none;stroke-width:9;stroke-linecap:round}
 .ring .rt{stroke:var(--line)}
-.ring .rf{stroke:var(--cal);stroke-dasharray:75 100;stroke-dashoffset:0;transition:stroke-dasharray .5s ease}
+.ring .rf{stroke:var(--cal);stroke-dasharray:100 100;stroke-dashoffset:0;transition:stroke-dasharray .5s ease}
 .ring .rf.o{stroke:var(--over)}
 
 
@@ -570,13 +570,14 @@ section[data-tab]{animation:vin .26s cubic-bezier(.2,.8,.2,1)}
     </div>
     <div class='pane' data-pane='ai' hidden>
       <div class='scan-top'>
-        <div class='seg2' id='aiSeg'><button type='button' data-am='photo' class='on'>Photo</button><button type='button' data-am='text'>Photo &amp; Text</button></div>
+        <div class='seg2' id='aiSeg'><button type='button' data-am='photo' class='on'>Photo</button><button type='button' data-am='text'>Photo + text</button><button type='button' data-am='only'>Text only</button></div>
         <span class='beta'>Beta</span>
       </div>
       <div id='aiCap'>
-        <div class='vf'><div style='font-size:64px;line-height:1'>&#127869;&#65039;</div><p style='margin:10px 0 0'>Take or upload a photo of your meal</p></div>
+        <div class='vf' id='aiVf'><div style='font-size:64px;line-height:1'>&#127869;&#65039;</div><p style='margin:10px 0 0'>Take or upload a photo of your meal</p></div>
         <textarea id='aiTxt' rows='2' placeholder='Add details, e.g. 2 tbsp chia seeds, no sugar' hidden style='margin-top:10px'></textarea>
-        <div class='shut-row'>
+        <button type='button' id='aiGo' class='primary' hidden style='width:100%;margin-top:10px'>Analyze</button>
+        <div class='shut-row' id='aiShut'>
           <label class='shut' for='aiCam' aria-label='Take a photo'></label><input id='aiCam' type='file' accept='image/*' capture='environment' hidden>
           <label class='round up' for='aiUp' aria-label='Upload a photo'><svg viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 16V4M7 9l5-5 5 5M5 20h14'/></svg></label><input id='aiUp' type='file' accept='image/*' hidden>
         </div>
@@ -696,7 +697,7 @@ function render(){normEntries();
   var rem=view==='r';
   $('calNow').textContent=r(rem?Math.max(left,0):t.cal);
   var fr=g.cal>0?Math.min(Math.max(rem?left/g.cal:t.cal/g.cal,0),1):0,rf=$('ringF');
-  rf.style.strokeDasharray=(fr*75).toFixed(2)+' 100';rf.style.display=fr>0?'':'none';rf.setAttribute('class','rf'+(pct>1?' o':''));
+  rf.style.strokeDasharray=(fr*100).toFixed(2)+' 100';rf.style.display=fr>0?'':'none';rf.setAttribute('class','rf'+(pct>1?' o':''));
   $('calSub').textContent=rem?'Remaining':'Consumed';
   $('calLeft').textContent=r(rem?t.cal:Math.max(left,0));$('calLeftL').textContent=rem?'Consumed':'Remaining';
   $('calTarget').textContent=r(g.cal);
@@ -1826,14 +1827,18 @@ async function labelScan(f){
 
 /* ===== AI plate ===== */
 var plate=null,plateOpen=true;
-function setAi(m){aiMode=m;document.querySelectorAll('#aiSeg [data-am]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-am')===m);});$('aiTxt').hidden=m!=='text';}
-async function aiRun(file){
-  if(!file)return;
-  $('aiCap').hidden=true;$('aiBusy').hidden=false;$('aiRes').innerHTML='';$('aiImg').src=URL.createObjectURL(file);
-  var s=await getSampler(),d=null,extra=(aiMode==='text'&&$('aiTxt').value.trim())?' Extra details from the user: '+$('aiTxt').value.trim()+'.':'';
-  if(s){try{d=await s.json('Identify the dish in this photo and break it into ingredients with realistic amounts.'+extra+' Reply with only JSON: {"plate":string,"ingredients":[{"name":string,"grams":number,"cal":number,"p":number,"f":number,"c":number}]} where cal, p, f and c are totals for that amount.',{images:[await shrink(file)],cache:false});}catch(e){d=null;}}
+function setAi(m){aiMode=m;document.querySelectorAll('#aiSeg [data-am]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-am')===m);});$('aiTxt').hidden=m==='photo';$('aiVf').hidden=m==='only';$('aiShut').hidden=m==='only';$('aiGo').hidden=m!=='only';$('aiTxt').placeholder=m==='only'?'Describe your meal, e.g. chicken burrito bowl with rice, black beans, cheese and salsa':'Add details, e.g. 2 tbsp chia seeds, no sugar';}
+async function aiRun(file,textOnly){
+  var tx=$('aiTxt').value.trim();
+  if(textOnly){if(!tx){$('aiRes').innerHTML="<p class='hint'>Type what you ate first.</p>";$('aiTxt').focus();return;}}
+  else if(!file)return;
+  $('aiCap').hidden=true;$('aiBusy').hidden=false;$('aiRes').innerHTML='';
+  if(textOnly){$('aiImg').removeAttribute('src');$('aiImg').hidden=true;}else{$('aiImg').hidden=false;$('aiImg').src=URL.createObjectURL(file);}
+  var s=await getSampler(),d=null,extra=(!textOnly&&aiMode==='text'&&tx)?' Extra details from the user: '+tx+'.':'';
+  var fmt=' Reply with only JSON: {"plate":string,"ingredients":[{"name":string,"grams":number,"cal":number,"p":number,"f":number,"c":number}]} where cal, p, f and c are totals for that amount.';
+  if(s){try{d=textOnly?await s.json('Break this meal description into ingredients with realistic amounts. Use any amounts the user gives, and otherwise assume typical portions. Description: '+tx+'.'+fmt,{cache:false}):await s.json('Identify the dish in this photo and break it into ingredients with realistic amounts.'+extra+fmt,{images:[await shrink(file)],cache:false});}catch(e){d=null;}}
   if(!d||!Array.isArray(d.ingredients)||!d.ingredients.some(function(x){return x&&x.grams>0;})){
-    $('aiBusy').hidden=true;$('aiCap').hidden=false;$('aiRes').innerHTML="<p class='hint'>"+esc(aiErr||'Couldn\u2019t find any food in that photo. Try a clearer, closer shot.')+"</p>";return;
+    $('aiBusy').hidden=true;$('aiCap').hidden=false;$('aiRes').innerHTML="<p class='hint'>"+esc(aiErr||(textOnly?'Couldn\u2019t work out any foods from that. Try adding amounts, like 150g chicken and 1 cup rice.':'Couldn\u2019t find any food in that photo. Try a clearer, closer shot.'))+"</p>";return;
   }
   plate={name:String(d.plate||'Meal'),sim:false,ing:d.ingredients.filter(function(x){return x&&x.grams>0;}).map(function(x){return {name:String(x.name),g:x.grams,g0:x.grams,cal:num(x.cal),p:num(x.p),f:num(x.f),c:num(x.c)};})};
   $('aiBusy').hidden=true;renderPlate();
@@ -1856,6 +1861,7 @@ $('aiRes').onclick=function(e){
 $('aiRes').onchange=function(e){var i=e.target.getAttribute&&e.target.getAttribute('data-pg');if(i!==null&&i!==undefined){var v=parseFloat(e.target.value);if(v>=0){plate.ing[+i].g=v||0.01;renderPlate();}}};
 $('aiCam').onchange=function(){var f=this.files&&this.files[0];this.value='';aiRun(f);};
 $('aiUp').onchange=function(){var f=this.files&&this.files[0];this.value='';aiRun(f);};
+$('aiGo').onclick=function(){aiRun(null,true);};
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
   if(!$('np').hidden)closeNp();
