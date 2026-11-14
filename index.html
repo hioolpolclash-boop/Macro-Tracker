@@ -287,7 +287,7 @@ body[data-view='log'] main{padding-bottom:210px}
 .hplus{width:40px;height:40px;min-height:0;border-radius:50%;background:#2e2e2e;border:0;color:#fff;font-size:17px;padding:0}
 .ht{display:flex;justify-content:flex-end;gap:10px;font-size:13px;white-space:nowrap}
 .ht i{font-style:normal;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#2e2e2e;font-size:11px;font-weight:600;margin-left:3px}
-.er{display:grid;grid-template-columns:56px 1fr;gap:8px;align-items:center;margin-bottom:8px}
+.er{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:8px}
 .tm{position:relative;z-index:1;background:var(--bg);text-align:center;font-size:12px;padding:4px 0;color:var(--ink)}
 .ec{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:12px;padding:12px 12px 12px 14px;cursor:pointer}
 .ec .em{font-size:24px;width:40px;text-align:center;flex:none}
@@ -376,6 +376,12 @@ section[data-tab]{animation:vin .26s cubic-bezier(.2,.8,.2,1)}
 .sheet,.wz{animation:sheetup .28s cubic-bezier(.2,.8,.2,1)}
 .fill{transition:width .5s cubic-bezier(.2,.8,.2,1)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.ec{min-width:0}.frow .fi b{overflow-wrap:anywhere}
+.spin{width:38px;height:38px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--cal);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.busy.txt{background:var(--surface);min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px 0}
+.busy.txt .ba{position:static;width:60%;left:auto;right:auto;bottom:auto}
+.busy.txt p{position:static;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -582,7 +588,7 @@ section[data-tab]{animation:vin .26s cubic-bezier(.2,.8,.2,1)}
           <label class='round up' for='aiUp' aria-label='Upload a photo'><svg viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 16V4M7 9l5-5 5 5M5 20h14'/></svg></label><input id='aiUp' type='file' accept='image/*' hidden>
         </div>
       </div>
-      <div id='aiBusy' class='busy' hidden><img id='aiImg' alt='Your meal'><div class='ba'></div><p>Analyzing&hellip; usually 3 to 10 seconds</p></div>
+      <div id='aiBusy' class='busy' hidden><img id='aiImg' alt='Your meal'><div class='spin' id='aiSpin' hidden></div><div class='ba'></div><p id='aiBusyT'>Analyzing&hellip;</p></div>
       <div id='aiRes'></div>
     </div>
     <div class='pane' data-pane='quick' hidden>
@@ -1851,20 +1857,28 @@ async function labelScan(f){
 /* ===== AI plate ===== */
 var plate=null,plateOpen=true;
 function setAi(m){aiMode=m;document.querySelectorAll('#aiSeg [data-am]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-am')===m);});$('aiTxt').hidden=m==='photo';$('aiVf').hidden=m==='only';$('aiShut').hidden=m==='only';$('aiGo').hidden=m!=='only';$('aiTxt').placeholder=m==='only'?'Describe your meal, e.g. chicken burrito bowl with rice, black beans, cheese and salsa':'Add details, e.g. 2 tbsp chia seeds, no sugar';}
+var aiTick=0;
+function aiBusyOn(textOnly){
+  var t0=Date.now(),el=$('aiBusyT');$('aiBusy').hidden=false;$('aiBusy').classList.toggle('txt',!!textOnly);$('aiSpin').hidden=!textOnly;
+  clearInterval(aiTick);el.textContent=(textOnly?'Working out your meal':'Analyzing')+'\u2026';
+  aiTick=setInterval(function(){var n=Math.round((Date.now()-t0)/1000);el.textContent=(textOnly?'Working out your meal':'Analyzing')+'\u2026 '+n+'s'+(n>12?' (still trying)':'');},1000);
+}
+function aiBusyOff(){clearInterval(aiTick);$('aiBusy').hidden=true;}
+function aiName(v,max){var n=String(v||'').replace(/\s+/g,' ').trim();if(n.length>max)n=n.slice(0,max).replace(/\s+\S*$/,'')+'\u2026';return n;}
 async function aiRun(file,textOnly){
   var tx=$('aiTxt').value.trim();
   if(textOnly){if(!tx){$('aiRes').innerHTML="<p class='hint'>Type what you ate first.</p>";$('aiTxt').focus();return;}}
   else if(!file)return;
-  $('aiCap').hidden=true;$('aiBusy').hidden=false;$('aiRes').innerHTML='';
+  $('aiCap').hidden=true;aiBusyOn(textOnly);$('aiRes').innerHTML='';
   if(textOnly){$('aiImg').removeAttribute('src');$('aiImg').hidden=true;}else{$('aiImg').hidden=false;$('aiImg').src=URL.createObjectURL(file);}
   var s=await getSampler(),d=null,extra=(!textOnly&&aiMode==='text'&&tx)?' Extra details from the user: '+tx+'.':'';
-  var fmt=' Reply with only JSON: {"plate":string,"ingredients":[{"name":string,"grams":number,"cal":number,"p":number,"f":number,"c":number}]} where cal, p, f and c are totals for that amount.';
+  var fmt=' Reply with only JSON: {"plate":string (a short dish name of at most 5 words, never the full description),"ingredients":[{"name":string,"grams":number,"cal":number,"p":number,"f":number,"c":number}]} where cal, p, f and c are totals for that amount.';
   if(s){try{d=textOnly?await s.json('Break this meal description into ingredients with realistic amounts. Use any amounts the user gives, and otherwise assume typical portions. Description: '+tx+'.'+fmt,{cache:false}):await s.json('Identify the dish in this photo and break it into ingredients with realistic amounts.'+extra+fmt,{images:[await shrink(file)],cache:false});}catch(e){d=null;}}
   if(!d||!Array.isArray(d.ingredients)||!d.ingredients.some(function(x){return x&&x.grams>0;})){
-    $('aiBusy').hidden=true;$('aiCap').hidden=false;$('aiRes').innerHTML="<p class='hint'>"+esc(aiErr||(textOnly?'Couldn\u2019t work out any foods from that. Try adding amounts, like 150g chicken and 1 cup rice.':'Couldn\u2019t find any food in that photo. Try a clearer, closer shot.'))+"</p>";return;
+    aiBusyOff();$('aiCap').hidden=false;$('aiRes').innerHTML="<p class='hint'>"+esc(aiErr||(textOnly?'Couldn\u2019t work out any foods from that. Try adding amounts, like 150g chicken and 1 cup rice.':'Couldn\u2019t find any food in that photo. Try a clearer, closer shot.'))+"</p>";return;
   }
-  plate={name:String(d.plate||'Meal'),sim:false,ing:d.ingredients.filter(function(x){return x&&x.grams>0;}).map(function(x){return {name:String(x.name),g:x.grams,g0:x.grams,cal:num(x.cal),p:num(x.p),f:num(x.f),c:num(x.c)};})};
-  $('aiBusy').hidden=true;renderPlate();
+  plate={name:aiName(d.plate,40)||'Meal',sim:false,ing:d.ingredients.filter(function(x){return x&&x.grams>0;}).map(function(x){return {name:aiName(x.name,50)||'Food',g:x.grams,g0:x.grams,cal:num(x.cal),p:num(x.p),f:num(x.f),c:num(x.c)};})};
+  aiBusyOff();renderPlate();
 }
 function plateTot(){var t=[0,0,0,0];plate.ing.forEach(function(x){var k=x.g/x.g0;t[0]+=x.cal*k;t[1]+=x.p*k;t[2]+=x.c*k;t[3]+=x.f*k;});return t;}
 function renderPlate(){
