@@ -581,6 +581,7 @@ section[data-tab]{animation:vin .26s cubic-bezier(.2,.8,.2,1)}
       </div>
       <div id='aiCap'>
         <div class='vf' id='aiVf'><div style='font-size:64px;line-height:1'>&#127869;&#65039;</div><p style='margin:10px 0 0'>Take or upload a photo of your meal</p></div>
+        <img id='aiPrev' alt='Your meal photo' hidden style='width:100%;max-height:240px;object-fit:cover;border-radius:16px;display:block'>
         <textarea id='aiTxt' rows='2' placeholder='Add details, e.g. 2 tbsp chia seeds, no sugar' hidden style='margin-top:10px'></textarea>
         <button type='button' id='aiGo' class='primary' hidden style='width:100%;margin-top:10px'>Analyze</button>
         <div class='shut-row' id='aiShut'>
@@ -1856,7 +1857,19 @@ async function labelScan(f){
 
 /* ===== AI plate ===== */
 var plate=null,plateOpen=true;
-function setAi(m){aiMode=m;document.querySelectorAll('#aiSeg [data-am]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-am')===m);});$('aiTxt').hidden=m==='photo';$('aiVf').hidden=m==='only';$('aiShut').hidden=m==='only';$('aiGo').hidden=m!=='only';$('aiTxt').placeholder=m==='only'?'Describe your meal, e.g. chicken burrito bowl with rice, black beans, cheese and salsa':'Add details, e.g. 2 tbsp chia seeds, no sugar';}
+var aiPend=null;
+function aiSync(){
+  var m=aiMode,pend=m==='text'&&!!aiPend;
+  document.querySelectorAll('#aiSeg [data-am]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-am')===m);});
+  $('aiTxt').hidden=m==='photo';$('aiVf').hidden=m==='only'||pend;$('aiShut').hidden=m==='only';$('aiGo').hidden=!(m==='only'||pend);$('aiPrev').hidden=!pend;
+  $('aiTxt').placeholder=m==='only'?'Describe your meal, e.g. chicken burrito bowl with rice, black beans, cheese and salsa':'Add details, e.g. 2 tbsp chia seeds, no sugar';
+}
+function setAi(m){aiMode=m;aiSync();}
+function aiPick(f){
+  if(!f)return;
+  if(aiMode==='text'){if($('aiPrev').src)URL.revokeObjectURL($('aiPrev').src);aiPend=f;$('aiPrev').src=URL.createObjectURL(f);aiSync();$('aiTxt').focus();}
+  else aiRun(f);
+}
 var aiTick=0;
 function aiBusyOn(textOnly){
   var t0=Date.now(),el=$('aiBusyT');$('aiBusy').hidden=false;$('aiBusy').classList.toggle('txt',!!textOnly);$('aiSpin').hidden=!textOnly;
@@ -1875,7 +1888,7 @@ async function aiRun(file,textOnly){
   var fmt=' Reply with only JSON: {"plate":string (a short dish name of at most 5 words, never the full description),"ingredients":[{"name":string,"grams":number,"cal":number,"p":number,"f":number,"c":number}]} where cal, p, f and c are totals for that amount.';
   if(s){try{d=textOnly?await s.json('Break this meal description into ingredients with realistic amounts. Use any amounts the user gives, and otherwise assume typical portions. Description: '+tx+'.'+fmt,{cache:false}):await s.json('Identify the dish in this photo and break it into ingredients with realistic amounts.'+extra+fmt,{images:[await shrink(file)],cache:false});}catch(e){d=null;}}
   if(!d||!Array.isArray(d.ingredients)||!d.ingredients.some(function(x){return x&&x.grams>0;})){
-    aiBusyOff();$('aiCap').hidden=false;$('aiRes').innerHTML="<p class='hint'>"+esc(aiErr||(textOnly?'Couldn\u2019t work out any foods from that. Try adding amounts, like 150g chicken and 1 cup rice.':'Couldn\u2019t find any food in that photo. Try a clearer, closer shot.'))+"</p>";return;
+    aiBusyOff();$('aiCap').hidden=false;aiSync();$('aiRes').innerHTML="<p class='hint'>"+esc(aiErr||(textOnly?'Couldn\u2019t work out any foods from that. Try adding amounts, like 150g chicken and 1 cup rice.':'Couldn\u2019t find any food in that photo. Try a clearer, closer shot.'))+"</p>";return;
   }
   plate={name:aiName(d.plate,40)||'Meal',sim:false,ing:d.ingredients.filter(function(x){return x&&x.grams>0;}).map(function(x){return {name:aiName(x.name,50)||'Food',g:x.grams,g0:x.grams,cal:num(x.cal),p:num(x.p),f:num(x.f),c:num(x.c)};})};
   aiBusyOff();renderPlate();
@@ -1890,15 +1903,15 @@ function renderPlate(){
 }
 $('aiRes').onclick=function(e){
   var id=e.target.id;
-  if(id==='aiAgain'){plate=null;$('aiRes').innerHTML='';$('aiCap').hidden=false;}
+  if(id==='aiAgain'){plate=null;$('aiRes').innerHTML='';$('aiCap').hidden=false;aiSync();}
   else if(id==='aiTog'){plateOpen=!plateOpen;renderPlate();}
   else if(id==='plateAdd'){var t=plateTot();stack.push({name:plate.name,k:[t[0],t[1],t[2],t[3]],unit:'x',qty:1,note:'1 serving'});renderStack();bmsg('Added '+plate.name+' to your queue.');}
   else if(id==='plateIng'){plate.ing.forEach(function(x){stack.push({name:x.name,k:[x.cal/x.g0,x.p/x.g0,x.c/x.g0,x.f/x.g0],unit:'g',qty:r(x.g)});});renderStack();bmsg('Added the ingredients to your queue.');}
 };
 $('aiRes').onchange=function(e){var i=e.target.getAttribute&&e.target.getAttribute('data-pg');if(i!==null&&i!==undefined){var v=parseFloat(e.target.value);if(v>=0){plate.ing[+i].g=v||0.01;renderPlate();}}};
-$('aiCam').onchange=function(){var f=this.files&&this.files[0];this.value='';aiRun(f);};
-$('aiUp').onchange=function(){var f=this.files&&this.files[0];this.value='';aiRun(f);};
-$('aiGo').onclick=function(){aiRun(null,true);};
+$('aiCam').onchange=function(){var f=this.files&&this.files[0];this.value='';aiPick(f);};
+$('aiUp').onchange=function(){var f=this.files&&this.files[0];this.value='';aiPick(f);};
+$('aiGo').onclick=function(){if(aiMode==='only')aiRun(null,true);else if(aiPend)aiRun(aiPend);};
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
   if(!$('np').hidden)closeNp();
