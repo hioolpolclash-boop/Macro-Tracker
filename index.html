@@ -761,18 +761,19 @@ function aiCfg(){try{var c=JSON.parse(localStorage.getItem(AIKEY)||'null');retur
 function aiProv(c){return c.provider||(c.key?'anthropic':'gemini');}
 function aiKeyOf(c){return aiProv(c)==='gemini'?(c.gkey||''):(c.key||'');}
 var AISYS='You are the nutrition assistant inside a food-logging app. Reply with only the JSON the user asks for, with no prose and no code fences.';
-var gUsed='';
+var gUsed='',gLvl={};
 function geminiSampler(c){
   return {json:async function(prompt,opt){
     var parts=[],imgs=(opt&&opt.images)||[],i,res,j=null;
     for(i=0;i<imgs.length;i++){var b=imgs[i],mt=b&&/^image\/(jpeg|png|gif|webp|heic|heif)$/.test(b.type)?b.type:'image/jpeg';parts.push({inline_data:{mime_type:mt,data:await blobB64(b)}});}
     parts.push({text:prompt});
     var sel=c.gmodel||'gemini-flash-latest',models=[sel].concat(['gemini-2.5-flash','gemini-2.5-flash-lite','gemini-flash-lite-latest'].filter(function(m){return m!==sel;}));
-    var TC=[{thinkingBudget:0},{thinkingLevel:'minimal'},null],attempt=0,t0=Date.now(),mi=0,gThink=0,lastSt=0;
+    var TC=[{thinkingBudget:0},{thinkingLevel:'minimal'},null,null],attempt=0,t0=Date.now(),mi=0,gThink=gLvl[models[0]]||0,lastSt=0;
     for(;;){
       var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(models[mi])+':generateContent';
       var gc={responseMimeType:'application/json',maxOutputTokens:4000,temperature:0.2};
-      if(TC[gThink])gc.thinkingConfig=TC[gThink];
+      if(gThink<2&&TC[gThink])gc.thinkingConfig=TC[gThink];
+      if(gThink>=3)delete gc.responseMimeType;
       var ctl=new AbortController(),tm=setTimeout(function(){ctl.abort();},40000);
       try{
         res=await fetch(url,{method:'POST',signal:ctl.signal,headers:{'content-type':'application/json','x-goog-api-key':c.gkey},body:JSON.stringify({systemInstruction:{parts:[{text:AISYS}]},contents:[{role:'user',parts:parts}],generationConfig:gc})});
@@ -782,12 +783,12 @@ function geminiSampler(c){
       if(res.ok)break;
       var em=(j&&j.error&&j.error.message)||('HTTP '+res.status);
       lastSt=res.status;
-      if(res.status===400&&/think/i.test(em)&&gThink<TC.length-1){gThink++;continue;}
+      if(res.status===400&&!/API key/i.test(em)&&gThink<TC.length-1){gThink++;continue;}
       if((res.status===503||res.status===500)&&attempt<1&&Date.now()-t0<20000){attempt++;await new Promise(function(r){setTimeout(r,900);});continue;}
-      if((res.status===503||res.status===500||res.status===429||res.status===404)&&mi<models.length-1&&Date.now()-t0<30000){mi++;attempt=0;gThink=0;continue;}
-      throw new Error(res.status===429?'Gemini’s free limit was hit (it is per minute and per day). Wait a minute and try again, or switch to Flash-Lite, which has higher free limits.':res.status===503?'Google’s AI is overloaded right now, and I tried the other free Gemini models too. Wait a minute and try again.':(res.status===400&&/API key/i.test(em))||res.status===401||res.status===403?'Google rejected the key. Check it in More, AI features.':res.status===404?'That model isn’t available to this key. Pick another model in More, AI features.':'Google said: '+em);
+      if((res.status===503||res.status===500||res.status===429||res.status===404)&&mi<models.length-1&&Date.now()-t0<30000){mi++;attempt=0;gThink=gLvl[models[mi]]||0;continue;}
+      throw new Error(res.status===429?'Gemini’s free limit was hit (it is per minute and per day). Wait a minute and try again, or switch to Flash-Lite, which has higher free limits.':res.status===503?'Google’s AI is overloaded right now, and I tried the other free Gemini models too. Wait a minute and try again.':(res.status===400&&/API key/i.test(em))||res.status===401||res.status===403?'Google rejected the key. Check it in More, AI features.':res.status===404?'That model isn’t available to this key. Pick another model in More, AI features.':'Google said: '+em+' (model '+models[mi]+')');
     }
-    gUsed=models[mi];
+    gUsed=models[mi];gLvl[models[mi]]=gThink;
     var cd=j&&j.candidates&&j.candidates[0];
     if(!cd||!cd.content){throw new Error(j&&j.promptFeedback&&j.promptFeedback.blockReason?'Google blocked that request. Try a different photo.':'Gemini sent no answer. Try again.');}
     if(cd.finishReason==='MAX_TOKENS'&&!(cd.content.parts||[]).some(function(x){return x.text&&!x.thought;})){throw new Error('Gemini ran out of room before answering. Try again, or choose Flash-Lite.');}
