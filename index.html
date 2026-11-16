@@ -382,6 +382,17 @@ section[data-tab]{animation:vin .26s cubic-bezier(.2,.8,.2,1)}
 .busy.txt{background:var(--surface);min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px 0}
 .busy.txt .ba{position:static;width:60%;left:auto;right:auto;bottom:auto}
 .busy.txt p{position:static;color:var(--mute)}
+.vf{position:relative}
+.vf.live{padding:0;height:300px;min-height:0;overflow:hidden;background:#000;justify-content:flex-start}
+.vf video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vf.live .vfbox{position:absolute;left:10%;right:10%;top:46%;width:auto;transform:translateY(-50%);box-shadow:0 0 0 999px rgba(0,0,0,.52);border-color:#fff;overflow:hidden}
+.vf.live .vfbox.lbl{height:190px}
+.vf.live .vfbox:not(.lbl)::after{content:'';position:absolute;left:6%;right:6%;height:2px;background:#ff4d4d;box-shadow:0 0 8px #ff4d4d;top:10%;animation:scanline 1.6s ease-in-out infinite alternate}
+@keyframes scanline{to{top:88%}}
+.vf.live #vfTxt{position:absolute;left:0;right:0;bottom:12px;margin:0;color:#fff;font-size:13px;text-shadow:0 1px 3px #000}
+#vfStart{margin-top:14px}
+.vf.live #vfTorch{position:absolute;right:12px;top:12px;background:rgba(0,0,0,.55)}
+#vfTorch.on{background:#fff;color:#000}
 </style>
 </head>
 <body>
@@ -563,9 +574,9 @@ section[data-tab]{animation:vin .26s cubic-bezier(.2,.8,.2,1)}
         <div class='seg2' id='scSeg'><button type='button' data-sm='bar' class='on'>Barcode</button><button type='button' data-sm='label'>Label</button></div>
         <button type='button' id='scKey' class='round' aria-label='Type a barcode number'><svg viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><rect x='3' y='6' width='18' height='12' rx='2'/><path d='M7 10h.01M11 10h.01M15 10h.01M7 14h10'/></svg></button>
       </div>
-      <div class='vf'><div class='vfbox' id='vfBox'></div><p id='vfTxt' style='margin:14px 0 0'>Take a photo of the barcode</p></div>
+      <div class='vf' id='vf'><video id='vfVid' playsinline muted autoplay hidden></video><div class='vfbox' id='vfBox'></div><p id='vfTxt'>Starting camera&hellip;</p><button type='button' id='vfStart' class='primary' hidden>Start camera</button><button type='button' id='vfTorch' class='round' hidden aria-label='Flashlight'><svg viewBox='0 0 24 24' width='22' height='22' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 2h10l-2 6H9zM9 8v12a2 2 0 0 0 6 0V8'/></svg></button></div>
       <div class='shut-row'>
-        <label class='shut' for='scFile' aria-label='Take a photo'></label><input id='scFile' type='file' accept='image/*' capture='environment' hidden>
+        <button type='button' class='shut' id='scShut' aria-label='Take a photo'></button><input id='scFile' type='file' accept='image/*' capture='environment' hidden>
         <label class='round up' for='scUp' aria-label='Upload a photo'><svg viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 16V4M7 9l5-5 5 5M5 20h14'/></svg></label><input id='scUp' type='file' accept='image/*' hidden>
       </div>
       <div id='scManual' hidden>
@@ -1444,7 +1455,7 @@ function openSheet(tm){
   $('sheet').hidden=false;document.body.style.overflow='hidden';
   shGo('search');sheetUpdate();
 }
-function closeSheet(){$('sheet').hidden=true;document.body.style.overflow='';logTime=null;}
+function closeSheet(){camStop();$('sheet').hidden=true;document.body.style.overflow='';logTime=null;}
 $('shClose').onclick=closeSheet;
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('sheet').hidden&&['fvSheet','fdSheet','cf'].every(function(i){return $(i).hidden;}))closeSheet();});
 document.querySelectorAll('.sh-tabs [data-sh]').forEach(function(b){b.onclick=function(){shGo(b.getAttribute('data-sh'));};});
@@ -1712,6 +1723,7 @@ function shGo(t){
   document.querySelectorAll('.pane').forEach(function(p){p.hidden=p.getAttribute('data-pane')!==t;});
   $('sq').placeholder=t==='lib'?'Filter foods':'Search for a food';
   if(t==='lib')renderLib();if(t==='search')renderSearch();
+  if(t==='scan')camStart();else camStop();
 }
 function renderLib(){
   var q=($('sq').value||'').toLowerCase().trim(),rows=[],h='';
@@ -1822,13 +1834,97 @@ $('cfCreate').onclick=function(){saveCf(false);};
 $('cfAdd').onclick=function(){saveCf(true);};
 
 /* ===== Scan: barcode and label ===== */
+var cam={stream:null,timer:0,busy:false,starting:false,det:null,torch:false};
+function vfSay(t){$('vfTxt').textContent=t;}
+function camHint(){
+  if(scMode==='label')vfSay('Fill the box with the nutrition table, then tap the shutter');
+  else vfSay(cam.det?'Point at the barcode. It scans by itself':'Line up the barcode, then tap the shutter');
+}
 function setScan(m){
   scMode=m;
   document.querySelectorAll('#scSeg [data-sm]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-sm')===m);});
   $('vfBox').classList.toggle('lbl',m==='label');
-  $('vfTxt').textContent=m==='bar'?'Take a photo of the barcode':'Take a photo of the nutrition label';
   $('lblRes').innerHTML='';
+  if(cam.stream){camHint();camLoop();}
+  else vfSay(m==='bar'?'Scan a barcode with the camera':'Scan a nutrition label with the camera');
 }
+async function camGet(){
+  var md=navigator.mediaDevices,q={width:{ideal:1920},height:{ideal:1080}},st;
+  try{st=await md.getUserMedia({video:Object.assign({facingMode:{exact:'environment'}},q),audio:false});}
+  catch(e){if(e&&e.name==='NotAllowedError')throw e;st=await md.getUserMedia({video:Object.assign({facingMode:{ideal:'environment'}},q),audio:false});}
+  var set=st.getVideoTracks()[0].getSettings?st.getVideoTracks()[0].getSettings():{};
+  if(set.facingMode==='user'){
+    try{
+      var ds=(await md.enumerateDevices()).filter(function(d){return d.kind==='videoinput'&&/back|rear|environment/i.test(d.label);});
+      if(ds.length){st.getTracks().forEach(function(t){t.stop();});st=await md.getUserMedia({video:Object.assign({deviceId:{exact:ds[ds.length-1].deviceId}},q),audio:false});}
+    }catch(e){}
+  }
+  return st;
+}
+async function camStart(){
+  if(cam.stream||cam.starting)return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){vfSay('Live camera isn’t available here. Use the shutter to take a photo.');$('vfStart').hidden=true;return;}
+  cam.starting=true;$('vfStart').hidden=true;vfSay('Starting camera…');
+  try{
+    var st=await camGet();
+    if($('sheet').hidden||shTab!=='scan'){st.getTracks().forEach(function(t){t.stop();});cam.starting=false;return;}
+    cam.stream=st;var v=$('vfVid');v.srcObject=st;v.hidden=false;try{await v.play();}catch(e){}
+    $('vf').classList.add('live');
+    var tr=st.getVideoTracks()[0],caps=tr.getCapabilities?tr.getCapabilities():{};
+    try{if(caps.focusMode&&caps.focusMode.indexOf('continuous')>-1)await tr.applyConstraints({advanced:[{focusMode:'continuous'}]});}catch(e){}
+    cam.torch=false;$('vfTorch').hidden=!caps.torch;$('vfTorch').classList.remove('on');
+    if(!cam.det&&'BarcodeDetector' in window){
+      try{var sup=BarcodeDetector.getSupportedFormats?await BarcodeDetector.getSupportedFormats():null,want=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf'];
+        cam.det=new BarcodeDetector(sup?{formats:want.filter(function(f){return sup.indexOf(f)>-1;})}:undefined);}catch(e){cam.det=null;}
+    }
+    camHint();camLoop();
+  }catch(e){
+    var den=e&&(e.name==='NotAllowedError'||e.name==='SecurityError');
+    vfSay(den?'Camera access is blocked. Allow it in your browser settings, or use the shutter to take a photo instead.':'Couldn’t start the camera. Use the shutter to take a photo instead.');
+    $('vfStart').hidden=false;$('vfStart').textContent='Try camera again';
+  }
+  cam.starting=false;
+}
+function camStop(){
+  clearInterval(cam.timer);cam.timer=0;cam.busy=false;
+  if(cam.stream){cam.stream.getTracks().forEach(function(t){t.stop();});}
+  cam.stream=null;var v=$('vfVid');v.srcObject=null;v.hidden=true;$('vf').classList.remove('live');$('vfTorch').hidden=true;
+  if(shTab==='scan'&&!$('sheet').hidden){$('vfStart').hidden=false;$('vfStart').textContent='Scan again';}
+}
+function camLoop(){
+  clearInterval(cam.timer);cam.timer=0;
+  if(!cam.stream||scMode!=='bar'||!cam.det)return;
+  cam.timer=setInterval(function(){
+    var v=$('vfVid');if(cam.busy||!cam.stream||v.readyState<2)return;cam.busy=true;
+    cam.det.detect(v).then(function(r){
+      if(r&&r.length&&cam.stream&&scMode==='bar'){var code=r[0].rawValue;try{navigator.vibrate&&navigator.vibrate(60);}catch(e){}camStop();vfSay('Found '+code);lookup(code);}
+    }).catch(function(){}).then(function(){cam.busy=false;});
+  },280);
+}
+function camFrame(crop){
+  var v=$('vfVid'),vw=v.videoWidth,vh=v.videoHeight,sx=0,sy=0,sw=vw,sh=vh;
+  if(crop){
+    var vr=v.getBoundingClientRect(),br=$('vfBox').getBoundingClientRect(),sc=Math.max(vr.width/vw,vr.height/vh),ox=(vr.width-vw*sc)/2,oy=(vr.height-vh*sc)/2,pad=0.06;
+    sx=(br.left-vr.left-ox)/sc;sy=(br.top-vr.top-oy)/sc;sw=br.width/sc;sh=br.height/sc;
+    sx-=sw*pad;sy-=sh*pad;sw*=1+2*pad;sh*=1+2*pad;
+    sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(vw-sx,sw);sh=Math.min(vh-sy,sh);
+  }
+  var cv=document.createElement('canvas');cv.width=Math.round(sw);cv.height=Math.round(sh);cv.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,cv.width,cv.height);
+  return new Promise(function(res){cv.toBlob(function(b){res(b);},'image/jpeg',0.9);});
+}
+$('vfStart').onclick=camStart;
+$('vfTorch').onclick=async function(){
+  try{var tr=cam.stream.getVideoTracks()[0];cam.torch=!cam.torch;await tr.applyConstraints({advanced:[{torch:cam.torch}]});this.classList.toggle('on',cam.torch);}catch(e){}
+};
+$('scShut').onclick=async function(){
+  if(!cam.stream){$('scFile').click();return;}
+  var f=await camFrame(scMode==='label');camStop();
+  if(f)scHandle(f);
+};
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden)camStop();
+  else if(!$('sheet').hidden&&shTab==='scan')camStart();
+});
 $('scKey').onclick=function(){$('scManual').hidden=!$('scManual').hidden;if(!$('scManual').hidden)$('bcIn').focus();};
 async function scHandle(f){
   if(!f)return;
